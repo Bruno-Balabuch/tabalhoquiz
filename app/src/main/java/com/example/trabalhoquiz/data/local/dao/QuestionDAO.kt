@@ -1,5 +1,6 @@
 package com.example.trabalhoquiz.data.local.dao
 
+import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -8,6 +9,7 @@ import androidx.room.Update
 import com.example.trabalhoquiz.data.local.model.QuestionEntity
 import kotlinx.coroutines.flow.Flow
 
+@Dao
 interface QuestionDAO {
 
     @Query("SELECT * FROM questions ORDER BY createdAt DESC")

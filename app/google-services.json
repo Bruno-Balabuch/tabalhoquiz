@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "179657162829",
+    "project_id": "trabalhoquiz-95fdb",
+    "storage_bucket": "trabalhoquiz-95fdb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179657162829:android:5e355f5025ec70dc97dc04",
+        "android_client_info": {
+          "package_name": "com.example.trabalhoquiz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABwg_WEgtu7K8mGyjqsE60v2zjI3lyPKI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

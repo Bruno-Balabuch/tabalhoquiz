@@ -8,7 +8,6 @@ class Converters {
 
     private val gson = Gson()
 
-    // Converters for List<String>
     @TypeConverter
     fun fromStringList(value: List<String>?): String {
         return gson.toJson(value)
@@ -21,8 +20,6 @@ class Converters {
         return gson.fromJson(value, listType)
     }
 
-    // Converter for Long <-> Date (timestamp) is unnecessary because we store timestamp as Long,
-    // but here's an example if you used java.util.Date
     @TypeConverter
     fun fromTimestamp(value: Long?): java.util.Date? {
         return value?.let { java.util.Date(it) }

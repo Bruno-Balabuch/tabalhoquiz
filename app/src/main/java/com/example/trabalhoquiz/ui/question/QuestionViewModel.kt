@@ -7,8 +7,6 @@ import com.example.trabalhoquiz.data.repository.QuestionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 data class QuestionUiState(
@@ -17,7 +15,7 @@ data class QuestionUiState(
     val error: String? = null
 )
 
-class QuestionViewModel(private val repository: QuestionRepository) : ViewModel()  {
+class QuestionViewModel(private val repository: QuestionRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuestionUiState(isLoading = true))
     val uiState: StateFlow<QuestionUiState> = _uiState.asStateFlow()
@@ -28,27 +26,28 @@ class QuestionViewModel(private val repository: QuestionRepository) : ViewModel(
 
     fun loadQuestions() {
         viewModelScope.launch {
-            repository.getAllQuestions()
-                .onStart { _uiState.value = _uiState.value.copy(isLoading = true) }
-                .catch { e ->
-                    _uiState.value = QuestionUiState(
-                        isLoading = false,
-                        error = e.message
-                    )
-                }
-                .collect { list ->
-                    _uiState.value = QuestionUiState(
-                        isLoading = false,
-                        questions = list
-                    )
-                }
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val questions = repository.getAllQuestionsFromFirestore()
+                _uiState.value = QuestionUiState(
+                    isLoading = false,
+                    questions = questions
+                )
+            } catch (e: Exception) {
+                _uiState.value = QuestionUiState(
+                    isLoading = false,
+                    error = e.message ?: "Erro ao carregar perguntas"
+                )
+            }
         }
     }
 
     fun addQuestion(question: QuestionEntity) {
         viewModelScope.launch {
             try {
-                repository.insertQuestion(question)
+                repository.addQuestionToFirestore(question)
+                val updatedList = _uiState.value.questions + question
+                _uiState.value = _uiState.value.copy(questions = updatedList)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
@@ -58,11 +57,12 @@ class QuestionViewModel(private val repository: QuestionRepository) : ViewModel(
     fun deleteQuestion(question: QuestionEntity) {
         viewModelScope.launch {
             try {
-                repository.deleteQuestion(question)
+                repository.deleteQuestionFromFirestore(question.id)
+                val updatedList = _uiState.value.questions.filterNot { it.id == question.id }
+                _uiState.value = _uiState.value.copy(questions = updatedList)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
-
 }

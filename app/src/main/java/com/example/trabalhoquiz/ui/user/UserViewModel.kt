@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 data class UserUiState(
     val isLoading: Boolean = false,
@@ -18,7 +19,6 @@ data class UserUiState(
     val error: String? = null,
     val isLoggedIn: Boolean = false
 )
-
 
 class UserViewModel(private val repository: UserRepository) : ViewModel() {
 
@@ -29,28 +29,47 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
     val uiState: StateFlow<UserUiState> = _uiState.asStateFlow()
 
     fun login(email: String, password: String) {
-        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnSuccessListener { result ->
-                val uid = result.user?.uid ?: return@addOnSuccessListener
-                syncUserWithFirebase(uid)
-            }
-            .addOnFailureListener { e ->
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                val result = auth.signInWithEmailAndPassword(email, password).await()
+                val uid = result.user?.uid ?: throw Exception("Usuário sem UID")
+
+                val userDoc = firestore.collection("users").document(uid).get().await()
+                val isAdmin = userDoc.getBoolean("admin") ?: false
+
+                val user = UserEntity(
+                    uid = uid,
+                    name = userDoc.getString("name") ?: "",
+                    email = userDoc.getString("email") ?: "",
+                    isAdmin = isAdmin
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isLoggedIn = true,
+                    currentUser = user,
+                    isAdmin = isAdmin,
+                    error = null
+                )
+
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Erro ao fazer login: ${e.message}"
                 )
             }
+        }
     }
 
-    fun registerUser(name: String, email: String, password: String, isAdmin: Boolean = false) {
+    fun register(name: String, email: String, password: String, isAdmin: Boolean = false) {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
                 val uid = result.user?.uid ?: return@addOnSuccessListener
                 val user = UserEntity(uid, name, email, isAdmin)
 
-                // Salvar no Firestore
                 firestore.collection("users").document(uid)
                     .set(user)
                     .addOnSuccessListener {
@@ -84,10 +103,25 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
                     )
                     saveUserLocally(user)
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Usuário não encontrado no Firestore."
+                    val firebaseUser = auth.currentUser
+                    val newUser = UserEntity(
+                        uid = uid,
+                        name = firebaseUser?.displayName ?: "Usuário",
+                        email = firebaseUser?.email ?: "",
+                        isAdmin = false
                     )
+
+                    firestore.collection("users").document(uid)
+                        .set(newUser)
+                        .addOnSuccessListener {
+                            saveUserLocally(newUser)
+                        }
+                        .addOnFailureListener { e ->
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = "Erro ao criar usuário no Firestore: ${e.message}"
+                            )
+                        }
                 }
             }
             .addOnFailureListener { e ->
@@ -121,12 +155,11 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
         auth.signOut()
         _uiState.value = UserUiState(isLoggedIn = false)
     }
-    
+
     fun checkSession() {
         val currentUser = auth.currentUser
         if (currentUser != null) {
             syncUserWithFirebase(currentUser.uid)
         }
     }
-
 }
