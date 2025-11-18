@@ -41,28 +41,4 @@ class QuestionViewModel(private val repository: QuestionRepository) : ViewModel(
             }
         }
     }
-
-    fun addQuestion(question: QuestionEntity) {
-        viewModelScope.launch {
-            try {
-                repository.addQuestionToFirestore(question)
-                val updatedList = _uiState.value.questions + question
-                _uiState.value = _uiState.value.copy(questions = updatedList)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
-            }
-        }
-    }
-
-    fun deleteQuestion(question: QuestionEntity) {
-        viewModelScope.launch {
-            try {
-                repository.deleteQuestionFromFirestore(question.id)
-                val updatedList = _uiState.value.questions.filterNot { it.id == question.id }
-                _uiState.value = _uiState.value.copy(questions = updatedList)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
-            }
-        }
-    }
 }

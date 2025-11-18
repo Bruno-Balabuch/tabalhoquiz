@@ -92,13 +92,21 @@ fun MainApp(
 
     Scaffold(
         bottomBar = {
-            if (currentScreen in listOf("quiz", "admin", "ranking"))
-                BottomNav { dest -> currentScreen = dest }
+            if (currentScreen in listOf("quiz", "admin", "ranking")) {
+                BottomNav(
+                    onNavigate = { dest -> currentScreen = dest },
+                    onLogout = {
+                        userViewModel.logout()
+                        currentScreen = "login"
+                    }
+                )
+            }
         }
     ) { padding ->
 
         Box(modifier = Modifier.padding(padding)) {
             when (currentScreen) {
+
                 "login" -> LoginScreen(
                     viewModel = userViewModel,
                     onLoginSuccess = {

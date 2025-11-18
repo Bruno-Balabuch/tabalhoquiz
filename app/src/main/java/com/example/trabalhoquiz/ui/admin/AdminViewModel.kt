@@ -104,10 +104,6 @@ class AdminViewModel(
         }
     }
 
-    fun clearMessages() {
-        _uiState.value = _uiState.value.copy(error = null, successMessage = null)
-    }
-
     fun updateQuestion(updatedQuestion: QuestionEntity) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)

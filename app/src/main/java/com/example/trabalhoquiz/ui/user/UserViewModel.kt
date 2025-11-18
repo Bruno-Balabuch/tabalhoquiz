@@ -152,9 +152,21 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
     }
 
     fun logout() {
-        auth.signOut()
-        _uiState.value = UserUiState(isLoggedIn = false)
+        viewModelScope.launch {
+            val currentUser = auth.currentUser
+            auth.signOut()
+
+            currentUser?.uid?.let { uid ->
+                val user = repository.getUserById(uid)
+                if (user != null) {
+                    repository.deleteUser(user)
+                }
+            }
+
+            _uiState.value = UserUiState(isLoggedIn = false)
+        }
     }
+
 
     fun checkSession() {
         val currentUser = auth.currentUser
